@@ -1,0 +1,3 @@
+# install the dependencies for this project
+install-libs libraries="./libraries.txt":
+    @sed '/^#/d;s/^\\#/#/' < {{ libraries }} | xargs -t arduino-cli lib install
