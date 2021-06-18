@@ -1,0 +1,7 @@
+{
+  "cpu": {
+    "fqbn": "Seeeduino:samd:seeed_XIAO_m0",
+    "name": "Seeeduino XIAO",
+    "port": "serial:///dev/cu.usbmodem14401"
+  }
+}
