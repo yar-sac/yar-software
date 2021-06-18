@@ -1,1 +1,3 @@
+# Install these dependencies with `just install-libs`.
+# One line per dependency. Lines beginning with # are ignored.
 SD@1.2.4
