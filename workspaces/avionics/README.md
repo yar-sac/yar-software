@@ -10,7 +10,7 @@ station.
 You will need:
 
 - [arduino-cli](https://arduino.github.io/arduino-cli/)
-- [just](https://github.com/casey/just).
+- [just](https://github.com/casey/just)
 
 When you have these installed, use the command `just install-libs` to make sure
 the necessary Arduino libraries are installed.
