@@ -1,1 +1,6 @@
 the main YAR app for viewing the data from the rocket launch
+
+requirements for running the app (as of now) :
+1. PySide6
+2. pyqtgraph
+
