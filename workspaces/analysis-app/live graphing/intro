@@ -1,1 +1,5 @@
 live plotting using pyqtgraph
+
+first run app experiment.py and then run live plotting.py to plot a live updating sin curve. 
+if you do not run app experiment first then running live plotting will produce "no file found"
+if you close the app experiment.py program then live plotting will continuously plot x = 0, y = 0
