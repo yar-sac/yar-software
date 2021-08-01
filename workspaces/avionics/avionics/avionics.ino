@@ -24,6 +24,7 @@ void setup() {
 
 void loop() {
     // Get GPS data
+    // https://github.com/neosarchizo/TinyGPS/blob/master/examples/simple_test/simple_test.ino
     bool newData = false;
     unsigned long chars;
     unsigned short sentences, failed;
