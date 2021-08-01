@@ -83,7 +83,7 @@ void loop() {
     // Send via radio interface
     digitalWrite(SPI_RADIO_SS, LOW); // enable Slave Select
     digitalWrite(SPI_RADIO_SS, HIGH`); // disable Slave Select
-}
+
     // Save to SD card
     digitalWrite(SPI_SD_SS, LOW); // enable Slave Select
     digitalWrite(SPI_SD_SS, HIGH`); // disable Slave Select
