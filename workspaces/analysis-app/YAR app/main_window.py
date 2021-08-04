@@ -13,14 +13,15 @@ from PySide6.QtWidgets import (
 )
 import pyqtgraph as pg
 
-class Graph1(pg.PlotWidget):                                               
-    def __init__(self, parent=None, plotItem=None, **kargs):
+class Graph(pg.PlotWidget):                                               
+    def __init__(self, parent=None, plotItem=None, title="", xaxis="", yaxis="", **kargs):
         super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
 
         styles = {"color": "k", "font-size": "12px"}  #standard dictionary of font for text
-        self.setLabel("left", "Height (m)", **styles)
-        self.setLabel("bottom", "Time (s)", **styles)
-        self.setTitle("Height v/s Time",**styles)
+        
+        self.setLabel("left", yaxis, **styles)
+        self.setLabel("bottom", xaxis, **styles)
+        self.setTitle(title, **styles)
         
         self.getAxis('left').setPen('k')              #colour for the axes and the axes labels
         self.getAxis('bottom').setPen('k')
@@ -35,104 +36,13 @@ class Graph1(pg.PlotWidget):
         self.pen_1 = pg.mkPen(color="r", width=2)     #pen to plot data
         self.plot_1([0,1],[0,0])
         
-
     def plot_1(self, x, y):
         self.data_line_1 = self.plot(x, y, fillLevel =0, brush=(200,50,50,50), pen=self.pen_1) #initial plot
 
     def update_1(self, x, y):
         self.data_line_1.setData(x, y) #plot after data update
 
-#graph 2,3,4 classes are identical to 1 but for different components
-class Graph2(pg.PlotWidget):
-    def __init__(self, parent=None, plotItem=None, **kargs):
-        super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
-
-        styles = {"color": "k", "font-size": "12px"}
-        self.setLabel("left", "Velocity (m/s)", **styles)
-        self.setLabel("bottom", "Time (s)", **styles)
-        self.setTitle("Velocity v/s Time",**styles)
         
-        self.getAxis('left').setPen('k')
-        self.getAxis('bottom').setPen('k')
-        self.getAxis('left').setTextPen('k')
-        self.getAxis('bottom').setTextPen('k')
-        
-
-        self.showGrid(x=True, y=True)
-        #self.setXRange(0, 1, padding=0.02)
-        #self.setYRange(0, 5, padding=0.02)
-        
-
-        self.pen_2 = pg.mkPen(color="r", width=2)
-        self.plot_2([0,1],[0,0])
-        
-
-    def plot_2(self, x, y):
-        self.data_line_2 = self.plot(x, y, fillLevel =0, brush=(200,50,50,50), pen=self.pen_2)
-
-    def update_2(self, x, y):
-        self.data_line_2.setData(x, y)
-
-
-class Graph3(pg.PlotWidget):
-    def __init__(self, parent=None, plotItem=None, **kargs):
-        super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
-
-        styles = {"color": "k", "font-size": "12px"}
-        self.setLabel("left", "Acceleration (m/s²)", **styles)
-        self.setLabel("bottom", "Time (s)", **styles)
-        self.setTitle("Accelaration v/s Time",**styles)
-        
-        self.getAxis('left').setPen('k')
-        self.getAxis('bottom').setPen('k')
-        self.getAxis('left').setTextPen('k')
-        self.getAxis('bottom').setTextPen('k')
-        
-
-        self.showGrid(x=True, y=True)
-        #self.setXRange(0, 1, padding=0.02)
-        #self.setYRange(0, 5, padding=0.02)
-        
-
-        self.pen_3 = pg.mkPen(color="r", width=2)
-        self.plot_3([0,1],[0,0])
-        
-
-    def plot_3(self, x, y, ch=1):
-        self.data_line_3 = self.plot(x, y, fillLevel =0, brush=(200,50,50,50), pen=self.pen_3)
-
-    def update_3(self, x, y, ch=1):
-        self.data_line_3.setData(x, y)
-
-class Graph4(pg.PlotWidget):
-    def __init__(self, parent=None, plotItem=None, **kargs):
-        super().__init__(parent=parent, background="w", plotItem=plotItem, **kargs)
-
-        styles = {"color": "k", "font-size": "12px"}
-        self.setLabel("left", "Temperature (°C)", **styles)
-        self.setLabel("bottom", "Time (s)", **styles)
-        self.setTitle("Temperature v/s Time",**styles)
-        
-        self.getAxis('left').setPen('k')
-        self.getAxis('bottom').setPen('k')
-        self.getAxis('left').setTextPen('k')
-        self.getAxis('bottom').setTextPen('k')
-        
-
-        self.showGrid(x=True, y=True)
-        #self.setXRange(0, 1, padding=0.02)
-        #self.setYRange(0, 5, padding=0.02)
-        
-
-        self.pen_3 = pg.mkPen(color="r", width=2)
-        self.plot_3([0,1],[0,0])
-        
-
-    def plot_3(self, x, y, ch=1):
-        self.data_line_3 = self.plot(x, y, fillLevel =0, brush=(200,50,50,50), pen=self.pen_3)
-
-    def update_3(self, x, y, ch=1):
-        self.data_line_3.setData(x, y)
 
 #box containing data acquisition controllers like start and stop
 class AcquisitionBox(QGroupBox):
@@ -173,17 +83,17 @@ class Dashboard(QGroupBox):
         layout.addWidget(self.long_label)
         layout.addWidget(self.lat_label)
         
-#control panel of all the graphs 
-class ControlPanel1(QFrame):
+# panel of all the graphs 
+class GraphControl(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
 
         self.setFrameStyle(QFrame.StyledPanel)              #styled frame panel
 
-        self.screen1 = Graph1()
-        self.screen2 = Graph2()
-        self.screen3 = Graph3()
-        self.screen4 = Graph4()
+        self.screen1 = Graph(title="Height v/s Time", yaxis="Height (m)" , xaxis="Time (s)")
+        self.screen2 = Graph(title="Velocity v/s Time", yaxis="Velocity (m/s)", xaxis="Time (s)",)
+        self.screen3 = Graph(title="Accelaration v/s Time", yaxis="Acceleration (m/s²)", xaxis="Time (s)")
+        self.screen4 = Graph(title="Temperature v/s Time", yaxis="Temperature (°C)", xaxis="Time (s)")
 
         self.content_layout = QGridLayout()
         self.content_layout.addWidget(self.screen1,0,0)     #add Graph1 to top left
@@ -193,8 +103,8 @@ class ControlPanel1(QFrame):
 
         self.setLayout(self.content_layout)
 
-#control panel of all the controller widgets
-class ControlPanel2(QFrame):
+# control panel of all the controller widgets
+class ControlPanel(QFrame):
     def __init__(self, parent=None):
         super().__init__(parent=parent)
         self.setFrameStyle(QFrame.StyledPanel)
@@ -218,12 +128,12 @@ class MainWindow(QMainWindow):
     def setupUi(self):
         self.setWindowTitle("YAR App")                         #Title of app 
 
-        self.control_panel_1 = ControlPanel1()                  
-        self.control_panel_2 = ControlPanel2()
+        self.graph_control = GraphControl()                  
+        self.control_panel = ControlPanel()
 
         self.content_layout = QHBoxLayout()
-        self.content_layout.addWidget(self.control_panel_2)    #Adding contoller panel
-        self.content_layout.addWidget(self.control_panel_1)    #adding graph panel
+        self.content_layout.addWidget(self.control_panel)    #Adding contoller panel
+        self.content_layout.addWidget(self.graph_control)    #adding graph panel
 
         self.setCentralWidget(QWidget())
         self.centralWidget().setLayout(self.content_layout)
