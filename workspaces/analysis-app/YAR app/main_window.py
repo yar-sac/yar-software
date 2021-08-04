@@ -1,9 +1,17 @@
 import sys
-
+from PySide6.QtWidgets import (
+    QComboBox,
+    QFrame,
+    QMainWindow,
+    QPushButton,
+    QWidget,
+    QHBoxLayout,
+    QVBoxLayout,
+    QGridLayout,
+    QGroupBox,
+    QLabel,
+)
 import pyqtgraph as pg
-from PySide6.QtWidgets import (QComboBox, QFrame, QGridLayout, QGroupBox,
-                               QHBoxLayout, QLabel, QMainWindow, QPushButton,
-                               QVBoxLayout, QWidget)
 
 
 class Graph(pg.PlotWidget):
@@ -71,7 +79,6 @@ class Dashboard(QGroupBox):
         self.temp_label = QLabel(f"Temperature = {None} °C")
         self.long_label = QLabel(f"Longitude = {None} °")
         self.lat_label = QLabel(f"Latitude = {None} °")
-        if
         self.apogee = QLabel(f"Apogee = {None} m")
 
         layout.addWidget(self.alt_label)  # adding labels to the groupbox
