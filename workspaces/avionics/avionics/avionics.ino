@@ -3,26 +3,26 @@
 #include <SPI.h>
 #include <TinyGPS.h>
 TinyGPS gps;
-const int I2C_PRESSURE_AND_ALTIMETER=0xC0
-const int SPI_RADIO_SS=7
-const int SPI_SD_SS=8
+const int I2C_PRESSURE_AND_ALTIMETER=0xC0;
+const int SPI_RADIO_SS=7;
+const int SPI_SD_SS=8;
 void setup() {
     // Setup Serial to talk to the GPS
     // https://www.u-blox.com/sites/default/files/products/documents/MAX-6_DataSheet_%28GPS.G6-HW-10106%29.pdf
     Serial1.begin(9600);
+    Serial.begin(9600);
 
     while (!Serial1);
+    while (!Serial);
     
     // Setup I2C to talk to the MPL3115A2 - Pressure sensor with altimetry
-     Wire.begin(); // join i2c bus (address optional for master)
+    Wire.begin(); // join i2c bus (address optional for master)
     
     // Setup SPI so we can talk to the radio and setup SD card SPI
     digitalWrite(SPI_SD_SS, HIGH); // disable Slave Select
     digitalWrite(SPI_RADIO_SS, HIGH); // disable Slave Select
     SPI.begin ();
     SPI.setClockDivider(SPI_CLOCK_DIV8);//divide the clock by 8
-    
-    
 }
 
 void loop() {
@@ -72,42 +72,67 @@ void loop() {
     // Get pressure and altitude
     Wire.beginTransmission(I2C_PRESSURE_AND_ALTIMETER); // transmit to device #4
     // Wire.write("x is ");        // sends five bytes  
-    Wire.send(0x26)
-    Wire.send(0xB8)
-    Wire.send(0x13)
-    Wire.send(0x07)
-    Wire.send(0x26)
-    Wire.send(0xB9)
-    Wire.requestFrom(0x00,1)
+    Wire.write(0x26);
+    Wire.write(0xB8);
+    Wire.write(0x13);
+    Wire.write(0x07);
+    Wire.write(0x26);
+    Wire.write(0xB9);
+    Wire.requestFrom(0x00,1);
+    char STA=0;
     while(Wire.available())    // slave may send less than requested
     {
-        char STA = Wire.read();    // receive a byte as character
-        Serial.print(c);         // print the character
+        STA = Wire.read();    // receive a byte as character
+        // Serial.print(c);         // print the character
     }
     Wire.endTransmission();
     if (STA & 0x08) {
         Wire.beginTransmission(I2C_PRESSURE_AND_ALTIMETER);
-        while
+        Wire.requestFrom(0x01,1);
+        while(Wire.available())    // slave may send less than requested
+        {
+            char OUT_P_MSB = Wire.read();    // receive a byte as character
+        }
+        Wire.requestFrom(0x02,1);
+        while(Wire.available())    // slave may send less than requested
+        {
+            char OUT_P_CSB = Wire.read();    // receive a byte as character
+        }
+        Wire.requestFrom(0x03,1);
+        while(Wire.available())    // slave may send less than requested
+        {
+            char OUT_P_LSB = Wire.read();    // receive a byte as character
+        }
+        Wire.requestFrom(0x04,1);
+        while(Wire.available())    // slave may send less than requested
+        {
+            char OUT_T_MSB = Wire.read();    // receive a byte as character
+        }
+        Wire.requestFrom(0x05,1);
+        while(Wire.available())    // slave may send less than requested
+        {
+            char OUT_T_LSB = Wire.read();    // receive a byte as character
+        }
         Wire.endTransmission();
     }
     int index =0;
-    char pressureAndAltitude[50]={}
+    char pressureAndAltitude[50]={};
     // Read pressure and altitude 
     while(Wire.available())    // slave may send less than requested
     {
         char c = Wire.read();    // receive a byte as character
         pressureAndAltitude[index]=c; 
-        index=index+1
+        index=index+1;
     }
     // Combnine data to a string or CSV
     // Send via radio interface
     digitalWrite(SPI_RADIO_SS, LOW); // enable Slave Select
 
     // Talk to the radio
-    digitalWrite(SPI_RADIO_SS, HIGH`); // disable Slave Select
+    digitalWrite(SPI_RADIO_SS, HIGH); // disable Slave Select
 
     // Save to SD card
     digitalWrite(SPI_SD_SS, LOW); // enable Slave Select
     // Write to the sd card
-    digitalWrite(SPI_SD_SS, HIGH`); // disable Slave Select
+    digitalWrite(SPI_SD_SS, HIGH); // disable Slave Select
 }
