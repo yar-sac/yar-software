@@ -8,6 +8,8 @@
 #include <SoftwareSerial.h>
 #include <TinyGPS++.h> // Include the TinyGPS++ library
 #include <Adafruit_BMP280.h>
+#include "SD.h"
+#include "IOSdcard.h"
 TaskHandle_t GPSTask;
 TaskHandle_t AltimeterTask;
 TaskHandle_t AccelrometerTask;
@@ -31,6 +33,8 @@ SemaphoreHandle_t accelrometer_mutex2;
 // For I2C
 SemaphoreHandle_t i2c_mutex;
 
+// PORTS
+const int SDCARD_SS_SPI=8;
 
 
 void Accelrometer(void *pvParameters)
@@ -143,21 +147,66 @@ void Altimeter(void *pvParameters)
         printf("%.2f %.2f\n",altimeter.readAltitude(),altimeter.readTemperature());
     }
 }
+
+void generateString(char *buffer){
+  // Altimeter
+        Altimeter_struct altimeter_stuct_copy;
+        xSemaphoreTake(altimeter_mutex,portMAX_DELAY);
+        memcpy(&altimeter_stuct_copy,&altimeter_stuct,sizeof(Altimeter_struct));
+        xSemaphoreGive(altimeter_mutex);
+        // GPS
+        GPS_struct gps_struct_copy;
+        xSemaphoreTake(gps_mutex,portMAX_DELAY);
+        memcpy(&gps_struct_copy,&gps_struct,sizeof(GPS_struct));
+        xSemaphoreGive(gps_mutex);
+        // Accelrometers
+        Accelrometer_struct accelrometer_struct_copy;
+        Accelrometer_struct accelrometer_struct2_copy;
+        xSemaphoreTake(accelrometer_mutex,portMAX_DELAY);
+        memcpy(&accelrometer_struct_copy,&accelrometer_struct,sizeof(Accelrometer_struct));
+        xSemaphoreGive(accelrometer_mutex);
+        xSemaphoreTake(accelrometer_mutex2,portMAX_DELAY);
+        memcpy(&accelrometer_struct2_copy,&accelrometer_struct2,sizeof(Accelrometer_struct));
+        xSemaphoreGive(accelrometer_mutex2);
+
+        sprintf(buffer,"%.5f, %lu, %.5f, %.5f, %.5f, %d, %.5f, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %lu \n",
+        altimeter_stuct_copy.altitude
+        ,altimeter_stuct_copy.lastUpdated
+        ,gps_struct_copy.altitude
+        ,gps_struct_copy.course
+        ,gps_struct_copy.latitude
+        ,gps_struct_copy.longitude
+        ,gps_struct_copy.satellites
+        ,gps_struct_copy.speed
+        ,gps_struct_copy.lastUpdated
+        ,accelrometer_struct_copy.x_gyro
+        ,accelrometer_struct_copy.y_gyro
+        ,accelrometer_struct_copy.z_gyro
+        ,accelrometer_struct_copy.x_accel
+        ,accelrometer_struct_copy.y_accel
+        ,accelrometer_struct_copy.z_accel
+        ,accelrometer_struct_copy.temperature
+        ,accelrometer_struct_copy.lastUpdated
+        ,accelrometer_struct2_copy.x_gyro
+        ,accelrometer_struct2_copy.y_gyro
+        ,accelrometer_struct2_copy.z_gyro
+        ,accelrometer_struct2_copy.x_accel
+        ,accelrometer_struct2_copy.y_accel
+        ,accelrometer_struct2_copy.z_accel
+        ,accelrometer_struct2_copy.temperature
+        ,accelrometer_struct2_copy.lastUpdated
+        );
+
+}
+
 void Radio(void *pvParameters)
 {
     while (1)
     {
-        // printf("Reading Altimeter struct\n");
-        Altimeter_struct copy;
-        xSemaphoreTake(altimeter_mutex,portMAX_DELAY);
-        memcpy(&copy,&altimeter_stuct,sizeof(Altimeter_struct));
-        
-        xSemaphoreGive(altimeter_mutex);
-        // printf("%.2f Read at: %ul\n",copy.altitude,copy.lastUpdated);
-        GPS_struct copy2;
-        xSemaphoreTake(gps_mutex,portMAX_DELAY);
-        memcpy(&copy2,&gps_struct,sizeof(GPS_struct));
-        xSemaphoreGive(gps_mutex);
+        char buffer[1000];
+        generateString(buffer);
+        printf(buffer);
+      
         // printf("Lat %.5f Lng %.5f Alt %.5f Sat %d\n", copy2.latitude,copy2.longitude,copy2.altitude,copy2.satellites);
 
         delay(10);
@@ -166,11 +215,44 @@ void Radio(void *pvParameters)
 }
 void SDCardWrite(void *pvParameters)
 {
+    SDFS SDCard = SDFS(FSImplPtr(new VFSImpl()));
+    while  (!SDCard.begin(SDCARD_SS_SPI)){
+        Serial.println("SD Card not detected");
+        delay(200);
+    }
+    Serial.println("SD CARD detected");
+    while (SDCard.cardType()==CARD_NONE){
+        Serial.println("No SD card detected");
+        delay(200);
+    }
+    switch (SDCard.cardType()){
+        case CARD_MMC:
+        Serial.println("MMC Card detected");
+        break;
+        case CARD_SD:
+        Serial.println("SD CARD detected");
+        break;
+        case CARD_SDHC:
+        printf("SDHC card detected\n");
+        break;
+        case CARD_UNKNOWN:
+        printf("Unkown card detected\n");
+        break;
+        default:
+        printf("SOMETHING has gone seriously wrong");
+        break;
+    }
+    testFileIO(SDCard,"test.txt");
     while (1)
     {
+        char buffer[1000];
+        generateString(buffer);
+        appendFile(SDCard,"results.txt",buffer);
+        delay(100);
+
         // printf("Running task SDCardWrite\n");
         // printf("Hello world from core %d!\n", xPortGetCoreID() );
-        vTaskDelay(1000 / portTICK_PERIOD_MS);
+        // vTaskDelay(1000 / portTICK_PERIOD_MS);
     }
 }
 void SDCardWrite2(void *pvParameters)
@@ -208,7 +290,4 @@ void setup()
 
 void loop()
 {
-    //     eTaskState e=eTaskStateGet(GPSTask);
-    //   printf("Status %d\n",e);
-    //   delay(10);
 }
