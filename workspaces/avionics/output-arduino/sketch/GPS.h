@@ -1,3 +1,4 @@
+#line 1 "/home/asimpoptani/work/yar-software/workspaces/avionics/esp32avonics/GPS.h"
 struct GPS_struct
 {
     double latitude;

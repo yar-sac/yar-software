@@ -1,3 +1,4 @@
+#line 1 "/home/asimpoptani/work/yar-software/workspaces/avionics/esp32avonics/IOSdcard.cpp"
 #include "IOSdcard.h"
 
 void listDir(fs::FS &fs, const char * dirname, uint8_t levels){
