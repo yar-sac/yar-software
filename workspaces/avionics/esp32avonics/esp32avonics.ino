@@ -10,6 +10,9 @@
 #include <Adafruit_BMP280.h>
 #include "SD.h"
 #include "IOSdcard.h"
+#include <RF24.h>
+#include <esp_now.h>
+#include "WiFi.h"
 TaskHandle_t GPSTask;
 TaskHandle_t AltimeterTask;
 TaskHandle_t AccelrometerTask;
@@ -38,29 +41,31 @@ SemaphoreHandle_t spi_mutex;
     TwoWire I2Ctwo = TwoWire(1);
 
 // PORTS
-const int SDCARD_SS_SPI = 27;
-const int SDCARD2_SS_SPI = 33;
+const int SDCARD_SS_SPI = 33;
+const int SDCARD2_SS_SPI = 34;
 
 void Accelrometer(void *pvParameters)
 {
 
     Adafruit_MPU6050 mpu;
-    Adafruit_MPU6050 mpu2;
-    mpu.begin(0x68,&I2Ctwo);
-    mpu2.begin(0x69,&I2Ctwo);
+    // Adafruit_MPU6050 mpu2;
+    xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+    mpu.begin(0x68,&I2Cone);
+    // mpu2.begin(0x69,&I2Cone);
     mpu.setAccelerometerRange(MPU6050_RANGE_16_G);
     mpu.setFilterBandwidth(MPU6050_BAND_260_HZ);
     mpu.setGyroRange(MPU6050_RANGE_2000_DEG);
-    mpu2.setAccelerometerRange(MPU6050_RANGE_16_G);
-    mpu2.setFilterBandwidth(MPU6050_BAND_260_HZ);
-    mpu2.setGyroRange(MPU6050_RANGE_2000_DEG);
+    // mpu2.setAccelerometerRange(MPU6050_RANGE_16_G);
+    // mpu2.setFilterBandwidth(MPU6050_BAND_260_HZ);
+    // mpu2.setGyroRange(MPU6050_RANGE_2000_DEG);
+    xSemaphoreGive(i2c_mutex);
 
     while (1)
     {
         sensors_event_t a, g, temp;
-        xSemaphoreTake(accel_i2c_mutex, portMAX_DELAY);
+        xSemaphoreTake(i2c_mutex, portMAX_DELAY);
         mpu.getEvent(&a, &g, &temp);
-        
+        xSemaphoreGive(i2c_mutex);
 
         xSemaphoreTake(accelrometer_mutex, portMAX_DELAY);
         accelrometer_struct.x_accel = a.acceleration.x;
@@ -72,24 +77,24 @@ void Accelrometer(void *pvParameters)
         accelrometer_struct.temperature = temp.temperature;
         accelrometer_struct.lastUpdated = millis();
         xSemaphoreGive(accelrometer_mutex);
-        xSemaphoreGive(accel_i2c_mutex);
         
-        xSemaphoreTake(accel_i2c_mutex, portMAX_DELAY);
-        sensors_event_t a2, g2, temp2;
-        mpu2.getEvent(&a2, &g2, &temp2);
         
+        // xSemaphoreTake(i2c_mutex, portMAX_DELAY);
+        // sensors_event_t a2, g2, temp2;
+        // mpu2.getEvent(&a2, &g2, &temp2);
+        // xSemaphoreGive(i2c_mutex);
 
-        xSemaphoreTake(accelrometer_mutex2, portMAX_DELAY);
-        accelrometer_struct2.x_accel = a2.acceleration.x;
-        accelrometer_struct2.y_accel = a2.acceleration.y;
-        accelrometer_struct2.z_accel = a2.acceleration.z;
-        accelrometer_struct2.x_gyro = g2.gyro.x;
-        accelrometer_struct2.y_gyro = g2.gyro.y;
-        accelrometer_struct2.z_gyro = g2.gyro.z;
-        accelrometer_struct2.temperature = temp2.temperature;
-        accelrometer_struct2.lastUpdated = millis();
-        xSemaphoreGive(accelrometer_mutex2);
-        xSemaphoreGive(accel_i2c_mutex);
+        // xSemaphoreTake(accelrometer_mutex2, portMAX_DELAY);
+        // accelrometer_struct2.x_accel = a2.acceleration.x;
+        // accelrometer_struct2.y_accel = a2.acceleration.y;
+        // accelrometer_struct2.z_accel = a2.acceleration.z;
+        // accelrometer_struct2.x_gyro = g2.gyro.x;
+        // accelrometer_struct2.y_gyro = g2.gyro.y;
+        // accelrometer_struct2.z_gyro = g2.gyro.z;
+        // accelrometer_struct2.temperature = temp2.temperature;
+        // accelrometer_struct2.lastUpdated = millis();
+        // xSemaphoreGive(accelrometer_mutex2);
+        
         // printf("%.3f\n",temp.temperature);
         // delay(5);
     }
@@ -135,8 +140,8 @@ void Altimeter(void *pvParameters)
     //if (!bmp.begin(BMP280_ADDRESS_ALT, BMP280_CHIPID)) {
     if (!bmp.begin())
     {
-        Serial.println(F("Could not find a valid BMP280 sensor, check wiring or "
-                         "try a different address!"));
+        // Serial.println(F("Could not find a valid BMP280 sensor, check wiring or "
+        //                  "try a different address!"));
         while (1)
             delay(10);
     }
@@ -186,7 +191,8 @@ void generateString(char *buffer)
     memcpy(&accelrometer_struct2_copy, &accelrometer_struct2, sizeof(Accelrometer_struct));
     xSemaphoreGive(accelrometer_mutex2);
     // printf("%lf %lf",gps_struct_copy.latitude,gps_struct_copy.longitude);
-    sprintf(buffer, "%f, %f, %f ,%lu, %lf, %lf, %lf, %lf, %d, %lf, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %lu \n",
+    // sprintf(buffer, "%f, %f, %f ,%lu, %lf, %lf, %lf, %lf, %d, %lf, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %lu \n",
+    sprintf(buffer, "%f, %f, %f ,%lu, %lf, %lf, %lf, %lf, %d, %lf, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu \n",
             altimeter_stuct_copy.altitude,
             altimeter_stuct_copy.pressure,
             altimeter_stuct_copy.temperature,
@@ -205,37 +211,55 @@ void generateString(char *buffer)
  accelrometer_struct_copy.y_accel,
  accelrometer_struct_copy.z_accel,
  accelrometer_struct_copy.temperature,
- accelrometer_struct_copy.lastUpdated,
- accelrometer_struct2_copy.x_gyro,
- accelrometer_struct2_copy.y_gyro,
- accelrometer_struct2_copy.z_gyro,
- accelrometer_struct2_copy.x_accel,
- accelrometer_struct2_copy.y_accel,
- accelrometer_struct2_copy.z_accel,
- accelrometer_struct2_copy.temperature,
- accelrometer_struct2_copy.lastUpdated);
+ accelrometer_struct_copy.lastUpdated
+//  accelrometer_struct2_copy.x_gyro,
+//  accelrometer_struct2_copy.y_gyro,
+//  accelrometer_struct2_copy.z_gyro,
+//  accelrometer_struct2_copy.x_accel,
+//  accelrometer_struct2_copy.y_accel,
+//  accelrometer_struct2_copy.z_accel,
+//  accelrometer_struct2_copy.temperature,
+//  accelrometer_struct2_copy.lastUpdated
+ );
 }
+// Structure example to receive data
+// Must match the sender structure
 
-void Radio(void *pvParameters)
-{
-    while (1)
-    {
-        char buffer[1000];
-        generateString(buffer);
-        printf(buffer);
+// void Radio(void *pvParameters)
+// {
 
-        // printf("Lat %.5f Lng %.5f Alt %.5f Sat %d\n", copy2.latitude,copy2.longitude,copy2.altitude,copy2.satellites);
+//   WiFi.mode(WIFI_MODE_STA);
+//     // Init ESP-NOW
+//   if (esp_now_init() != ESP_OK) {
+//     // Serial.println("Error initializing ESP-NOW");
+//     return;
+//   }
+//     // callback when data is sent
+//     void OnDataSent(const uint8_t *mac_addr, esp_now_send_status_t status) {
+//     Serial.print("\r\nLast Packet Send Status:\t");
+//     Serial.println(status == ESP_NOW_SEND_SUCCESS ? "Delivery Success" : "Delivery Fail");
+//     }
+  
+//   // Once ESPNow is successfully Init, we will register for recv CB to
+//   // get recv packer info
+//   esp_now_register_recv_cb(OnDataRecv);
+//     while (1)
+//     {
+        
+//         char buffer[250];
 
-        delay(10);
-    }
-}
+
+
+//         delay(10);
+//     }
+// }
 void SDCardWrite(void *pvParameters)
 {
     xSemaphoreTake(spi_mutex, portMAX_DELAY);
     SDFS SDCard = SDFS(FSImplPtr(new VFSImpl()));
     while (!SDCard.begin(SDCARD_SS_SPI))
     {
-        Serial.println("SD Card not detected");
+        // Serial.println("SD Card not detected");
         delay(200);
     }
     xSemaphoreGive(spi_mutex);
@@ -309,11 +333,11 @@ void setup()
 {
 
     I2Cone.begin(21,22,400000);
-    I2Ctwo.begin(26, 25, 400000);
+    // I2Ctwo.begin(26, 25, 400000);
     // Serial begin
     Serial.begin(115200);
-    while (!Serial)
-        ;
+    // while (!Serial)
+    //     ;
     //   Create mutexs
     gps_mutex = xSemaphoreCreateMutex();
     accelrometer_mutex = xSemaphoreCreateMutex();
