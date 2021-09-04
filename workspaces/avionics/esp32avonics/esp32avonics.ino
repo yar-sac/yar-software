@@ -10,7 +10,7 @@
 #include <Adafruit_BMP280.h>
 #include "SD.h"
 #include "IOSdcard.h"
-#include <RF24.h>
+//#include <RF24.h>
 #include <esp_now.h>
 #include "WiFi.h"
 TaskHandle_t GPSTask;
@@ -160,7 +160,7 @@ void Altimeter(void *pvParameters)
         bmp_pressure->getEvent(&pressure_event);
         xSemaphoreGive(altimeter_mutex);
         altimeter_stuct.pressure = pressure_event.pressure;
-        altimeter_stuct.altitude = bmp.readAltitude();
+        altimeter_stuct.altitude = bmp.readAltitude(1020.0);
         altimeter_stuct.temperature = temp_event.temperature;
         altimeter_stuct.lastUpdated = millis();
         xSemaphoreGive(altimeter_mutex);
