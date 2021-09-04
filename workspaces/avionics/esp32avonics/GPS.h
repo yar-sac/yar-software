@@ -7,6 +7,10 @@ struct GPS_struct
     double course;
     int satellites;
     unsigned long lastUpdated;
+    int hour;
+    int min;
+    int sec;
+    int centi;
 };
 struct Altimeter_struct {
     float altitude;

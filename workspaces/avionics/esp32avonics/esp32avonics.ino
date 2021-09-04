@@ -20,6 +20,7 @@ TaskHandle_t AccelrometerTask;
 TaskHandle_t RadioTask;
 TaskHandle_t SDCardWriteTask;
 TaskHandle_t SDCardWriteTask2;
+TaskHandle_t BlinkTask;
 
 GPS_struct gps_struct = {};
 Altimeter_struct altimeter_stuct = {};
@@ -43,6 +44,8 @@ SemaphoreHandle_t spi_mutex;
 // PORTS
 const int SDCARD_SS_SPI = 33;
 const int SDCARD2_SS_SPI = 34;
+
+const int LED_PIN = 2;
 
 void Accelrometer(void *pvParameters)
 {
@@ -124,6 +127,11 @@ void GPS(void *pvParameters)
         gps_struct.course = tinyGPS.course.deg();
         gps_struct.satellites = tinyGPS.satellites.value();
 
+        gps_struct.hour = tinyGPS.time.hour();
+        gps_struct.min = tinyGPS.time.minute();
+        gps_struct.sec = tinyGPS.time.second();
+        gps_struct.centi = tinyGPS.time.centisecond();
+
         xSemaphoreGive(gps_mutex);
         delay(100);
     }
@@ -192,26 +200,30 @@ void generateString(char *buffer)
     xSemaphoreGive(accelrometer_mutex2);
     // printf("%lf %lf",gps_struct_copy.latitude,gps_struct_copy.longitude);
     // sprintf(buffer, "%f, %f, %f ,%lu, %lf, %lf, %lf, %lf, %d, %lf, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %lu \n",
-    sprintf(buffer, "%f, %f, %f ,%lu, %lf, %lf, %lf, %lf, %d, %lf, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu \n",
+    sprintf(buffer, "%d, %d, %d, %d, %f, %f, %f ,%lu, %lf, %lf, %lf, %lf, %d, %lf, %lu, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f, %.5f , %lu \n",
+            gps_struct_copy.hour,
+            gps_struct_copy.min,
+            gps_struct_copy.sec,
+            gps_struct_copy.centi,
             altimeter_stuct_copy.altitude,
             altimeter_stuct_copy.pressure,
             altimeter_stuct_copy.temperature,
             altimeter_stuct_copy.lastUpdated,
             gps_struct_copy.altitude,
             gps_struct_copy.course,
-             gps_struct_copy.latitude,
- gps_struct_copy.longitude,
- gps_struct_copy.satellites,
- gps_struct_copy.speed,
- gps_struct_copy.lastUpdated,
- accelrometer_struct_copy.x_gyro,
- accelrometer_struct_copy.y_gyro,
- accelrometer_struct_copy.z_gyro,
- accelrometer_struct_copy.x_accel,
- accelrometer_struct_copy.y_accel,
- accelrometer_struct_copy.z_accel,
- accelrometer_struct_copy.temperature,
- accelrometer_struct_copy.lastUpdated
+            gps_struct_copy.latitude,
+            gps_struct_copy.longitude,
+            gps_struct_copy.satellites,
+            gps_struct_copy.speed,
+            gps_struct_copy.lastUpdated,
+            accelrometer_struct_copy.x_gyro,
+            accelrometer_struct_copy.y_gyro,
+            accelrometer_struct_copy.z_gyro,
+            accelrometer_struct_copy.x_accel,
+            accelrometer_struct_copy.y_accel,
+            accelrometer_struct_copy.z_accel,
+            accelrometer_struct_copy.temperature,
+            accelrometer_struct_copy.lastUpdated
 //  accelrometer_struct2_copy.x_gyro,
 //  accelrometer_struct2_copy.y_gyro,
 //  accelrometer_struct2_copy.z_gyro,
@@ -329,6 +341,68 @@ void SDCardWrite2(void *pvParameters)
     }
 }
 
+void StatusBlink(void *pvParameters)
+{
+    // Status blinker runs once a minute after boot
+    // and gives a long or short blink for each sensor set
+    // to show if that sensor is operating as expected.
+    
+    // Get all sensors' data
+    // Altimeter
+    Altimeter_struct altimeter_stuct_copy;
+    xSemaphoreTake(altimeter_mutex, portMAX_DELAY);
+    memcpy(&altimeter_stuct_copy, &altimeter_stuct, sizeof(Altimeter_struct));
+    xSemaphoreGive(altimeter_mutex);
+    // GPS
+    GPS_struct gps_struct_copy;
+    xSemaphoreTake(gps_mutex, portMAX_DELAY);
+    memcpy(&gps_struct_copy, &gps_struct, sizeof(GPS_struct));
+    xSemaphoreGive(gps_mutex);
+    // Accelrometers
+    Accelrometer_struct accelrometer_struct_copy;
+    xSemaphoreTake(accelrometer_mutex, portMAX_DELAY);
+    memcpy(&accelrometer_struct_copy, &accelrometer_struct, sizeof(Accelrometer_struct));
+    xSemaphoreGive(accelrometer_mutex);
+
+    // Check that each sensor is operating as expected
+    // Altimeter
+    int alt = ((-100 < altimeter_stuct_copy.altitude) && (altimeter_stuct_copy.altitude < 1000));
+    int pre = ((0 < altimeter_stuct_copy.pressure) && (altimeter_stuct_copy.pressure < 100000));
+    int temp = ((10 < altimeter_stuct_copy.temperature) && (altimeter_stuct_copy.temperature < 35));
+    int alti_working = alt && pre && temp;
+
+    // GPS (Assuming we're still in the UK)
+    int gp_alt = ((-100 < gps_struct_copy.altitude) && (gps_struct_copy.altitude < 1000));
+    int lat = ((45 < gps_struct_copy.latitude) && (gps_struct_copy.latitude < 60));
+    int lng = ((-10 < gps_struct_copy.longitude) && (gps_struct_copy.longitude < 10));
+    int gps_working = gp_alt && lat && lng;
+
+    // Accelrometers
+    int x = ((-50 < accelrometer_struct_copy.x_accel) && (accelrometer_struct_copy.x_accel < 50));
+    int y = ((-50 < accelrometer_struct_copy.y_accel) && (accelrometer_struct_copy.y_accel < 50));
+    int z = ((-50 < accelrometer_struct_copy.z_accel) && (accelrometer_struct_copy.z_accel < 50));
+    int acc_working = x && y && z;
+
+    // Now we flash the light accordingly
+    digitalWrite(LED_PIN,HIGH);
+    delay(1000);
+    digitalWrite(LED_PIN,LOW);
+    delay(1000);
+    digitalWrite(LED_PIN,HIGH);
+    delay(alti_working ? 1000 : 200);    // Altimeter blink
+    digitalWrite(LED_PIN,LOW);
+    delay(1000);
+    digitalWrite(LED_PIN,HIGH);
+    delay(gps_working ? 1000 : 200);    // GPS blink
+    digitalWrite(LED_PIN,LOW);
+    delay(1000);
+    digitalWrite(LED_PIN,HIGH);
+    delay(acc_working ? 1000 : 200);    // Accel blink
+    digitalWrite(LED_PIN,LOW);
+
+    delay(20000); // Run again in 20
+}
+
 void setup()
 {
 
@@ -344,15 +418,19 @@ void setup()
     altimeter_mutex = xSemaphoreCreateMutex();
     accelrometer_mutex2 = xSemaphoreCreateMutex();
     i2c_mutex = xSemaphoreCreateMutex();
-    accel_i2c_mutex=xSemaphoreCreateMutex();
-    spi_mutex=xSemaphoreCreateMutex();
+    accel_i2c_mutex = xSemaphoreCreateMutex();
+    spi_mutex = xSemaphoreCreateMutex();
 
-    xTaskCreatePinnedToCore(GPS, "GPS", 10000, NULL, 1, &GPSTask, 1);
+
+    pinMode(LED_PIN, OUTPUT);
+
+    xTaskCreatePinnedToCore(GPS, "GPS", 10000, NULL, 1, &GPSTask, 0);
     xTaskCreatePinnedToCore(Altimeter, "Altimeter", 10000, NULL, 1, &AltimeterTask, 1);
     // xTaskCreatePinnedToCore(Radio, "Radio", 10000, NULL, 1, &RadioTask, 0);
     xTaskCreatePinnedToCore(SDCardWrite, "SDCard1", 10000, NULL, 1, &SDCardWriteTask, 1);
     // xTaskCreatePinnedToCore(SDCardWrite2, "SDCard2", 10000, NULL, 1, &SDCardWriteTask2, 1);
     xTaskCreatePinnedToCore(Accelrometer, "Accel1", 10000, NULL, 1, &AccelrometerTask, 1);
+    xTaskCreatePinnedToCore(StatusBlink, "Blink", 10000, NULL, 1, &BlinkTask, 0);
 }
 
 void loop()
